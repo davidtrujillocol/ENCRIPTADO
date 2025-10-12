@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>AES-256-CBC (PKCS#7) — Encriptar / Desencriptar</title>
+<style>
+  body { font-family: system-ui, -apple-system, Roboto, "Segoe UI", Arial; padding: 18px; max-width: 900px; margin: auto; }
+  h1{font-size:1.2rem}
+  label{display:block;margin-top:10px;font-weight:600}
+  textarea, input[type="text"], input[type="password"]{width:100%;padding:8px;margin-top:6px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
+  .row{display:flex;gap:8px;margin-top:8px}
+  button{padding:8px 12px;border-radius:6px;border:0;background:#2563eb;color:white;cursor:pointer}
+  button.secondary{background:#6b7280}
+  pre{background:#f3f4f6;padding:10px;border-radius:6px;overflow:auto}
+  .box{border:1px solid #e5e7eb;padding:12px;border-radius:8px;margin-top:12px}
+  small.note{color:#374151}
+</style>
+</head>
+<body>
+  <h1>AES-256-CBC (PKCS#7) — Encriptar y Desencriptar</h1>
+  <div class="box">
+    <label>Texto a encriptar</label>
+    <textarea id="plaintext" rows="4" placeholder="Escribe aquí el mensaje..."></textarea>
+
+    <label>Clave (contraseña)</label>
+    <input id="encPassword" type="password" placeholder="Introduce la contraseña">
+
+    <div class="row" style="margin-top:10px">
+      <button id="btnEncrypt">Encriptar</button>
+      <button class="secondary" id="btnClear">Limpiar</button>
+    </div>
+
+    <label style="margin-top:12px">Resultado (Base64 — IV + ciphertext)</label>
+    <textarea id="encrypted" rows="3" readonly placeholder="Aquí aparecerá el Base64"></textarea>
+    <div class="row">
+      <button id="copyEnc">Copiar</button>
+    </div>
+  </div>
+
+  <div class="box" style="margin-top:18px">
+    <label>Texto cifrado (Base64 — IV + ciphertext)</label>
+    <textarea id="cipherInput" rows="3" placeholder="Pega aquí el Base64 recibido (IV + ciphertext)"></textarea>
+
+    <label>Clave (contraseña) para desencriptar</label>
+    <input id="decPassword" type="password" placeholder="Introduce la contraseña">
+
+    <div class="row">
+      <button id="btnDecrypt">Desencriptar</button>
+      <button class="secondary" id="btnClearDec">Limpiar</button>
+    </div>
+
+    <label style="margin-top:12px">Texto desencriptado</label>
+    <textarea id="decrypted" rows="4" readonly placeholder="Aquí aparecerá el texto desencriptado"></textarea>
+    <div class="row">
+      <button id="copyDec">Copiar</button>
+    </div>
+  </div>
+
+  <p class="note"><small class="note">Nota: la clave se deriva usando SHA-256 (resultado de 32 bytes) — El script corre en el navegador; no envía datos a servidores.</small></p>
+
+<script>
+/* Helpers */
+function toUint8Array(b64) {
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+function fromUint8Array(u8) {
+  let s = '';
+  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+  return btoa(s);
+}
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function hexToBytes(hex) {
+  if (hex.length % 2) throw "hex invalido";
+  const out = new Uint8Array(hex.length/2);
+  for (let i=0;i<hex.length;i+=2) out[i/2]=parseInt(hex.slice(i,i+2),16);
+  return out;
+}
+
+/* PKCS#7 padding / unpadding */
+function pkcs7Pad(buf, blockSize = 16) {
+  const pad = blockSize - (buf.length % blockSize || blockSize);
+  const out = new Uint8Array(buf.length + pad);
+  out.set(buf, 0);
+  out.fill(pad, buf.length);
+  return out;
+}
+function pkcs7Unpad(buf) {
+  if (buf.length === 0) throw "Bloque vacío";
+  const pad = buf[buf.length - 1];
+  if (pad < 1 || pad > 16) throw "Padding inválido";
+  for (let i = 0; i < pad; i++) {
+    if (buf[buf.length - 1 - i] !== pad) throw "Padding inválido";
+  }
+  return buf.subarray(0, buf.length - pad);
+}
+
+/* derive 32-byte key from password using SHA-256 */
+async function deriveKeyFromPassword(password) {
+  const enc = new TextEncoder();
+  const passBytes = enc.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', passBytes);
+  return new Uint8Array(hash); // 32 bytes
+}
+
+/* AES-256-CBC encrypt -> returns base64( iv + ciphertext ) */
+async function encryptAesCbc(plaintextStr, password) {
+  const enc = new TextEncoder();
+  const plainBytes = enc.encode(plaintextStr);
+  const keyBytes = await deriveKeyFromPassword(password);
+  const iv = crypto.getRandomValues(new Uint8Array(16));
+  const padded = pkcs7Pad(plainBytes, 16);
+
+  const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-CBC' }, false, ['encrypt']);
+  const ct = await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, cryptoKey, padded);
+
+  const combined = new Uint8Array(iv.length + ct.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(ct), iv.length);
+  return fromUint8Array(combined);
+}
+
+/* AES-256-CBC decrypt from base64( iv + ciphertext ) -> returns plaintext string */
+async function decryptAesCbc(b64, password) {
+  const combined = toUint8Array(b64);
+  if (combined.length < 16) throw "Datos cifrados demasiado cortos";
+  const iv = combined.subarray(0,16);
+  const ct = combined.subarray(16);
+  const keyBytes = await deriveKeyFromPassword(password);
+
+  const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-CBC' }, false, ['decrypt']);
+  const ptBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv }, cryptoKey, ct);
+  const ptU8 = new Uint8Array(ptBuf);
+  const unpadded = pkcs7Unpad(ptU8);
+  const dec = new TextDecoder();
+  return dec.decode(unpadded);
+}
+
+/* UI wiring */
+document.getElementById('btnEncrypt').addEventListener('click', async () => {
+  const text = document.getElementById('plaintext').value || '';
+  const pass = document.getElementById('encPassword').value || '';
+  try {
+    if (!text) { alert('Escribe el texto a encriptar'); return; }
+    if (!pass) { alert('Introduce la clave'); return; }
+    document.getElementById('encrypted').value = 'Procesando...';
+    const b64 = await encryptAesCbc(text, pass);
+    document.getElementById('encrypted').value = b64;
+  } catch (e) {
+    document.getElementById('encrypted').value = '';
+    alert('Error: ' + e);
+  }
+});
+
+document.getElementById('btnDecrypt').addEventListener('click', async () => {
+  const b64 = document.getElementById('cipherInput').value.trim();
+  const pass = document.getElementById('decPassword').value || '';
+  try {
+    if (!b64) { alert('Pega el Base64 (IV + ciphertext)'); return; }
+    if (!pass) { alert('Introduce la clave'); return; }
+    document.getElementById('decrypted').value = 'Procesando...';
+    const txt = await decryptAesCbc(b64, pass);
+    document.getElementById('decrypted').value = txt;
+  } catch (e) {
+    document.getElementById('decrypted').value = '';
+    alert('Error al desencriptar: ' + e);
+  }
+});
+
+document.getElementById('copyEnc').addEventListener('click', () => {
+  const v = document.getElementById('encrypted').value;
+  if (!v) return;
+  navigator.clipboard.writeText(v);
+});
+document.getElementById('copyDec').addEventListener('click', () => {
+  const v = document.getElementById('decrypted').value;
+  if (!v) return;
+  navigator.clipboard.writeText(v);
+});
+document.getElementById('btnClear').addEventListener('click', () => {
+  document.getElementById('plaintext').value='';
+  document.getElementById('encPassword').value='';
+  document.getElementById('encrypted').value='';
+});
+document.getElementById('btnClearDec').addEventListener('click', () => {
+  document.getElementById('cipherInput').value='';
+  document.getElementById('decPassword').value='';
+  document.getElementById('decrypted').value='';
+});
+</script>
+</body>
+</html>
