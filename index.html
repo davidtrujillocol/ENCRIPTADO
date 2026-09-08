@@ -1,198 +1,1058 @@
+```html
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>AES-256-CBC (PKCS#7) — Encriptar / Desencriptar</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>AES-256-GCM — Encriptar / Desencriptar</title>
+
 <style>
-  body { font-family: system-ui, -apple-system, Roboto, "Segoe UI", Arial; padding: 18px; max-width: 900px; margin: auto; }
-  h1{font-size:1.2rem}
-  label{display:block;margin-top:10px;font-weight:600}
-  textarea, input[type="text"], input[type="password"]{width:100%;padding:8px;margin-top:6px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
-  .row{display:flex;gap:8px;margin-top:8px}
-  button{padding:8px 12px;border-radius:6px;border:0;background:#2563eb;color:white;cursor:pointer}
-  button.secondary{background:#6b7280}
-  pre{background:#f3f4f6;padding:10px;border-radius:6px;overflow:auto}
-  .box{border:1px solid #e5e7eb;padding:12px;border-radius:8px;margin-top:12px}
-  small.note{color:#374151}
+  body {
+    font-family: system-ui, -apple-system, Roboto, "Segoe UI", Arial;
+    padding: 18px;
+    max-width: 900px;
+    margin: auto;
+  }
+
+  h1 {
+    font-size: 1.2rem;
+  }
+
+  label {
+    display: block;
+    margin-top: 10px;
+    font-weight: 600;
+  }
+
+  textarea,
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+
+  .row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  button {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 0;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+  }
+
+  button.secondary {
+    background: #6b7280;
+  }
+
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .box {
+    border: 1px solid #e5e7eb;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+  }
+
+  small.note {
+    color: #374151;
+  }
+
+  .security {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+
+  .status {
+    margin-top: 8px;
+    font-size: 0.9rem;
+  }
 </style>
 </head>
+
 <body>
-  <h1>AES-256-CBC (PKCS#7) — Encriptar y Desencriptar</h1>
-  <div class="box">
-    <label>Texto a encriptar</label>
-    <textarea id="plaintext" rows="4" placeholder="Escribe aquí el mensaje..."></textarea>
 
-    <label>Clave (contraseña)</label>
-    <input id="encPassword" type="password" placeholder="Introduce la contraseña">
+<h1>AES-256-GCM — Encriptar y Desencriptar</h1>
 
-    <div class="row" style="margin-top:10px">
-      <button id="btnEncrypt">Encriptar</button>
-      <button class="secondary" id="btnClear">Limpiar</button>
-    </div>
+<div class="box">
 
-    <label style="margin-top:12px">Resultado (Base64 — IV + ciphertext)</label>
-    <textarea id="encrypted" rows="3" readonly placeholder="Aquí aparecerá el Base64"></textarea>
-    <div class="row">
-      <button id="copyEnc">Copiar</button>
-    </div>
+  <label for="plaintext">Texto a encriptar</label>
+
+  <textarea
+    id="plaintext"
+    rows="4"
+    autocomplete="off"
+    spellcheck="false"
+    placeholder="Escribe aquí el mensaje..."
+  ></textarea>
+
+  <label for="encPassword">Clave (contraseña)</label>
+
+  <input
+    id="encPassword"
+    type="password"
+    autocomplete="new-password"
+    placeholder="Introduce la contraseña"
+  >
+
+  <div class="row">
+
+    <button id="btnEncrypt">
+      Encriptar
+    </button>
+
+    <button
+      class="secondary"
+      id="btnClear"
+      type="button"
+    >
+      Limpiar
+    </button>
+
   </div>
 
-  <div class="box" style="margin-top:18px">
-    <label>Texto cifrado (Base64 — IV + ciphertext)</label>
-    <textarea id="cipherInput" rows="3" placeholder="Pega aquí el Base64 recibido (IV + ciphertext)"></textarea>
+  <label for="encrypted">
+    Resultado (Base64)
+  </label>
 
-    <label>Clave (contraseña) para desencriptar</label>
-    <input id="decPassword" type="password" placeholder="Introduce la contraseña">
+  <textarea
+    id="encrypted"
+    rows="4"
+    readonly
+    spellcheck="false"
+    placeholder="Aquí aparecerá el texto cifrado"
+  ></textarea>
 
-    <div class="row">
-      <button id="btnDecrypt">Desencriptar</button>
-      <button class="secondary" id="btnClearDec">Limpiar</button>
-    </div>
+  <div class="row">
 
-    <label style="margin-top:12px">Texto desencriptado</label>
-    <textarea id="decrypted" rows="4" readonly placeholder="Aquí aparecerá el texto desencriptado"></textarea>
-    <div class="row">
-      <button id="copyDec">Copiar</button>
-    </div>
+    <button
+      id="copyEnc"
+      type="button"
+    >
+      Copiar
+    </button>
+
   </div>
 
-  <p class="note"><small class="note">Nota: la clave se deriva usando SHA-256 (resultado de 32 bytes) — El script corre en el navegador; no envía datos a servidores.</small></p>
+</div>
+
+
+<div class="box">
+
+  <label for="cipherInput">
+    Texto cifrado (Base64)
+  </label>
+
+  <textarea
+    id="cipherInput"
+    rows="4"
+    autocomplete="off"
+    spellcheck="false"
+    placeholder="Pega aquí el Base64 recibido"
+  ></textarea>
+
+
+  <label for="decPassword">
+    Clave (contraseña) para desencriptar
+  </label>
+
+  <input
+    id="decPassword"
+    type="password"
+    autocomplete="current-password"
+    placeholder="Introduce la contraseña"
+  >
+
+
+  <div class="row">
+
+    <button id="btnDecrypt">
+      Desencriptar
+    </button>
+
+    <button
+      class="secondary"
+      id="btnClearDec"
+      type="button"
+    >
+      Limpiar
+    </button>
+
+  </div>
+
+
+  <label for="decrypted">
+    Texto desencriptado
+  </label>
+
+  <textarea
+    id="decrypted"
+    rows="4"
+    readonly
+    spellcheck="false"
+    placeholder="Aquí aparecerá el texto desencriptado"
+  ></textarea>
+
+
+  <div class="row">
+
+    <button
+      id="copyDec"
+      type="button"
+    >
+      Copiar
+    </button>
+
+  </div>
+
+</div>
+
+
+<div class="security">
+
+  <strong>Seguridad:</strong>
+
+  <br>
+
+  AES-256-GCM + PBKDF2-SHA-256.
+  <br>
+
+  El cifrado se realiza localmente en el navegador.
+  <br>
+
+  La contraseña nunca se almacena ni se envía a un servidor.
+
+</div>
+
+
+<p>
+  <small class="note">
+    El resultado contiene:
+    versión + salt + IV + ciphertext + autenticación GCM.
+  </small>
+</p>
+
 
 <script>
-/* Helpers */
-function toUint8Array(b64) {
-  const bin = atob(b64);
-  const arr = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  return arr;
-}
-function fromUint8Array(u8) {
-  let s = '';
-  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
-  return btoa(s);
-}
-function bytesToHex(bytes) {
-  return Array.from(bytes).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-function hexToBytes(hex) {
-  if (hex.length % 2) throw "hex invalido";
-  const out = new Uint8Array(hex.length/2);
-  for (let i=0;i<hex.length;i+=2) out[i/2]=parseInt(hex.slice(i,i+2),16);
-  return out;
-}
 
-/* PKCS#7 padding / unpadding */
-function pkcs7Pad(buf, blockSize = 16) {
-  const pad = blockSize - (buf.length % blockSize || blockSize);
-  const out = new Uint8Array(buf.length + pad);
-  out.set(buf, 0);
-  out.fill(pad, buf.length);
-  return out;
-}
-function pkcs7Unpad(buf) {
-  if (buf.length === 0) throw "Bloque vacío";
-  const pad = buf[buf.length - 1];
-  if (pad < 1 || pad > 16) throw "Padding inválido";
-  for (let i = 0; i < pad; i++) {
-    if (buf[buf.length - 1 - i] !== pad) throw "Padding inválido";
+/*
+ * ============================================================
+ * CONFIGURACIÓN CRIPTOGRÁFICA
+ * ============================================================
+ */
+
+const VERSION = 1;
+
+/*
+ * PBKDF2:
+ * 600.000 iteraciones de SHA-256.
+ *
+ * Esto hace que probar contraseñas sea deliberadamente costoso.
+ */
+
+const PBKDF2_ITERATIONS = 600000;
+
+const SALT_LENGTH = 16;       // 128 bits
+const IV_LENGTH = 12;         // 96 bits recomendado para GCM
+const KEY_LENGTH = 256;       // AES-256
+const TAG_LENGTH = 128;       // GCM authentication tag
+
+
+/*
+ * ============================================================
+ * CONVERSIÓN BASE64
+ * ============================================================
+ */
+
+function bytesToBase64(bytes) {
+
+  let binary = "";
+
+  const chunkSize = 0x8000;
+
+  for (
+    let i = 0;
+    i < bytes.length;
+    i += chunkSize
+  ) {
+
+    binary += String.fromCharCode(
+      ...bytes.subarray(
+        i,
+        Math.min(i + chunkSize, bytes.length)
+      )
+    );
+
   }
-  return buf.subarray(0, buf.length - pad);
+
+  return btoa(binary);
 }
 
-/* derive 32-byte key from password using SHA-256 */
-async function deriveKeyFromPassword(password) {
-  const enc = new TextEncoder();
-  const passBytes = enc.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', passBytes);
-  return new Uint8Array(hash); // 32 bytes
+
+function base64ToBytes(base64) {
+
+  const binary = atob(base64);
+
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+
+    bytes[i] = binary.charCodeAt(i);
+
+  }
+
+  return bytes;
 }
 
-/* AES-256-CBC encrypt -> returns base64( iv + ciphertext ) */
-async function encryptAesCbc(plaintextStr, password) {
-  const enc = new TextEncoder();
-  const plainBytes = enc.encode(plaintextStr);
-  const keyBytes = await deriveKeyFromPassword(password);
-  const iv = crypto.getRandomValues(new Uint8Array(16));
-  const padded = pkcs7Pad(plainBytes, 16);
 
-  const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-CBC' }, false, ['encrypt']);
-  const ct = await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, cryptoKey, padded);
+/*
+ * ============================================================
+ * DERIVACIÓN DE CLAVE
+ * ============================================================
+ *
+ * Contraseña
+ *      +
+ *     SALT
+ *      ↓
+ * PBKDF2-SHA-256
+ *      ↓
+ * AES-256 key
+ *
+ */
 
-  const combined = new Uint8Array(iv.length + ct.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(ct), iv.length);
-  return fromUint8Array(combined);
+async function deriveKey(password, salt) {
+
+  const encoder = new TextEncoder();
+
+  const passwordBytes =
+    encoder.encode(password);
+
+  /*
+   * Importamos la contraseña como material
+   * para PBKDF2.
+   */
+
+  const passwordKey =
+    await crypto.subtle.importKey(
+      "raw",
+      passwordBytes,
+      {
+        name: "PBKDF2"
+      },
+      false,
+      [
+        "deriveKey"
+      ]
+    );
+
+
+  /*
+   * Derivamos la clave AES-256.
+   */
+
+  return crypto.subtle.deriveKey(
+
+    {
+      name: "PBKDF2",
+
+      salt: salt,
+
+      iterations: PBKDF2_ITERATIONS,
+
+      hash: "SHA-256"
+
+    },
+
+    passwordKey,
+
+    {
+      name: "AES-GCM",
+
+      length: KEY_LENGTH
+
+    },
+
+    false,
+
+    [
+      "encrypt",
+      "decrypt"
+    ]
+
+  );
 }
 
-/* AES-256-CBC decrypt from base64( iv + ciphertext ) -> returns plaintext string */
-async function decryptAesCbc(b64, password) {
-  const combined = toUint8Array(b64);
-  if (combined.length < 16) throw "Datos cifrados demasiado cortos";
-  const iv = combined.subarray(0,16);
-  const ct = combined.subarray(16);
-  const keyBytes = await deriveKeyFromPassword(password);
 
-  const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-CBC' }, false, ['decrypt']);
-  const ptBuf = await crypto.subtle.decrypt({ name: 'AES-CBC', iv }, cryptoKey, ct);
-  const ptU8 = new Uint8Array(ptBuf);
-  const unpadded = pkcs7Unpad(ptU8);
-  const dec = new TextDecoder();
-  return dec.decode(unpadded);
+/*
+ * ============================================================
+ * ENCRIPTAR
+ * ============================================================
+ *
+ * Formato final:
+ *
+ * [VERSION][SALT][IV][CIPHERTEXT + GCM TAG]
+ *
+ */
+
+async function encryptAesGcm(
+  plaintext,
+  password
+) {
+
+  const encoder = new TextEncoder();
+
+  const plaintextBytes =
+    encoder.encode(plaintext);
+
+
+  /*
+   * Salt aleatorio.
+   *
+   * El salt NO es secreto.
+   */
+
+  const salt =
+    crypto.getRandomValues(
+      new Uint8Array(SALT_LENGTH)
+    );
+
+
+  /*
+   * IV aleatorio.
+   *
+   * Nunca reutilizamos el IV para un nuevo cifrado.
+   */
+
+  const iv =
+    crypto.getRandomValues(
+      new Uint8Array(IV_LENGTH)
+    );
+
+
+  /*
+   * Derivamos AES-256 desde la contraseña.
+   */
+
+  const key =
+    await deriveKey(
+      password,
+      salt
+    );
+
+
+  /*
+   * AES-256-GCM.
+   *
+   * GCM proporciona:
+   *
+   * - Confidencialidad
+   * - Integridad
+   * - Autenticación
+   */
+
+  const ciphertext =
+    await crypto.subtle.encrypt(
+
+      {
+        name: "AES-GCM",
+
+        iv: iv,
+
+        tagLength: TAG_LENGTH
+
+      },
+
+      key,
+
+      plaintextBytes
+
+    );
+
+
+  /*
+   * Construimos el resultado:
+   *
+   * VERSION
+   * SALT
+   * IV
+   * CIPHERTEXT + TAG
+   */
+
+  const ciphertextBytes =
+    new Uint8Array(ciphertext);
+
+
+  const result =
+    new Uint8Array(
+      1 +
+      SALT_LENGTH +
+      IV_LENGTH +
+      ciphertextBytes.length
+    );
+
+
+  let offset = 0;
+
+
+  /*
+   * Version
+   */
+
+  result[offset] = VERSION;
+
+  offset += 1;
+
+
+  /*
+   * Salt
+   */
+
+  result.set(
+    salt,
+    offset
+  );
+
+  offset += SALT_LENGTH;
+
+
+  /*
+   * IV
+   */
+
+  result.set(
+    iv,
+    offset
+  );
+
+  offset += IV_LENGTH;
+
+
+  /*
+   * Ciphertext + authentication tag
+   */
+
+  result.set(
+    ciphertextBytes,
+    offset
+  );
+
+
+  /*
+   * Convertimos todo a Base64.
+   */
+
+  return bytesToBase64(result);
 }
 
-/* UI wiring */
-document.getElementById('btnEncrypt').addEventListener('click', async () => {
-  const text = document.getElementById('plaintext').value || '';
-  const pass = document.getElementById('encPassword').value || '';
+
+/*
+ * ============================================================
+ * DESENCRIPTAR
+ * ============================================================
+ */
+
+async function decryptAesGcm(
+  base64,
+  password
+) {
+
+  const data =
+    base64ToBytes(
+      base64
+    );
+
+
+  /*
+   * Tamaño mínimo:
+   *
+   * VERSION
+   * +
+   * SALT
+   * +
+   * IV
+   * +
+   * TAG
+   */
+
+  const minimumLength =
+    1 +
+    SALT_LENGTH +
+    IV_LENGTH +
+    16;
+
+
+  if (data.length < minimumLength) {
+
+    throw new Error(
+      "Datos cifrados inválidos o incompletos."
+    );
+
+  }
+
+
+  let offset = 0;
+
+
+  /*
+   * Leer versión
+   */
+
+  const version =
+    data[offset];
+
+  offset += 1;
+
+
+  if (version !== VERSION) {
+
+    throw new Error(
+      "Versión de cifrado no soportada."
+    );
+
+  }
+
+
+  /*
+   * Leer salt
+   */
+
+  const salt =
+    data.slice(
+      offset,
+      offset + SALT_LENGTH
+    );
+
+  offset += SALT_LENGTH;
+
+
+  /*
+   * Leer IV
+   */
+
+  const iv =
+    data.slice(
+      offset,
+      offset + IV_LENGTH
+    );
+
+  offset += IV_LENGTH;
+
+
+  /*
+   * El resto es:
+   *
+   * ciphertext + authentication tag
+   */
+
+  const ciphertext =
+    data.slice(offset);
+
+
+  /*
+   * Derivar la misma clave
+   */
+
+  const key =
+    await deriveKey(
+      password,
+      salt
+    );
+
+
   try {
-    if (!text) { alert('Escribe el texto a encriptar'); return; }
-    if (!pass) { alert('Introduce la clave'); return; }
-    document.getElementById('encrypted').value = 'Procesando...';
-    const b64 = await encryptAesCbc(text, pass);
-    document.getElementById('encrypted').value = b64;
-  } catch (e) {
-    document.getElementById('encrypted').value = '';
-    alert('Error: ' + e);
-  }
-});
 
-document.getElementById('btnDecrypt').addEventListener('click', async () => {
-  const b64 = document.getElementById('cipherInput').value.trim();
-  const pass = document.getElementById('decPassword').value || '';
-  try {
-    if (!b64) { alert('Pega el Base64 (IV + ciphertext)'); return; }
-    if (!pass) { alert('Introduce la clave'); return; }
-    document.getElementById('decrypted').value = 'Procesando...';
-    const txt = await decryptAesCbc(b64, pass);
-    document.getElementById('decrypted').value = txt;
-  } catch (e) {
-    document.getElementById('decrypted').value = '';
-    alert('Error al desencriptar: ' + e);
-  }
-});
+    const plaintext =
+      await crypto.subtle.decrypt(
 
-document.getElementById('copyEnc').addEventListener('click', () => {
-  const v = document.getElementById('encrypted').value;
-  if (!v) return;
-  navigator.clipboard.writeText(v);
-});
-document.getElementById('copyDec').addEventListener('click', () => {
-  const v = document.getElementById('decrypted').value;
-  if (!v) return;
-  navigator.clipboard.writeText(v);
-});
-document.getElementById('btnClear').addEventListener('click', () => {
-  document.getElementById('plaintext').value='';
-  document.getElementById('encPassword').value='';
-  document.getElementById('encrypted').value='';
-});
-document.getElementById('btnClearDec').addEventListener('click', () => {
-  document.getElementById('cipherInput').value='';
-  document.getElementById('decPassword').value='';
-  document.getElementById('decrypted').value='';
-});
+        {
+          name: "AES-GCM",
+
+          iv: iv,
+
+          tagLength: TAG_LENGTH
+
+        },
+
+        key,
+
+        ciphertext
+
+      );
+
+
+    const decoder =
+      new TextDecoder();
+
+    return decoder.decode(
+      plaintext
+    );
+
+  } catch (error) {
+
+    /*
+     * No revelamos si falló la contraseña
+     * o si los datos fueron modificados.
+     */
+
+    throw new Error(
+      "No fue posible desencriptar. " +
+      "La contraseña puede ser incorrecta " +
+      "o los datos pueden haber sido modificados."
+    );
+
+  }
+}
+
+
+/*
+ * ============================================================
+ * ENCRIPTAR — BOTÓN
+ * ============================================================
+ */
+
+document
+  .getElementById("btnEncrypt")
+  .addEventListener(
+    "click",
+    async () => {
+
+      const text =
+        document
+          .getElementById("plaintext")
+          .value;
+
+
+      const password =
+        document
+          .getElementById("encPassword")
+          .value;
+
+
+      if (!text) {
+
+        alert(
+          "Escribe el texto a encriptar."
+        );
+
+        return;
+
+      }
+
+
+      if (!password) {
+
+        alert(
+          "Introduce una contraseña."
+        );
+
+        return;
+
+      }
+
+
+      const button =
+        document.getElementById(
+          "btnEncrypt"
+        );
+
+
+      try {
+
+        button.disabled = true;
+
+        button.textContent =
+          "Encriptando...";
+
+
+        const encrypted =
+          await encryptAesGcm(
+            text,
+            password
+          );
+
+
+        document
+          .getElementById("encrypted")
+          .value = encrypted;
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        alert(
+          "Error durante el cifrado."
+        );
+
+
+      } finally {
+
+        button.disabled = false;
+
+        button.textContent =
+          "Encriptar";
+
+      }
+
+    }
+  );
+
+
+/*
+ * ============================================================
+ * DESENCRIPTAR — BOTÓN
+ * ============================================================
+ */
+
+document
+  .getElementById("btnDecrypt")
+  .addEventListener(
+    "click",
+    async () => {
+
+      const encrypted =
+        document
+          .getElementById("cipherInput")
+          .value
+          .trim();
+
+
+      const password =
+        document
+          .getElementById("decPassword")
+          .value;
+
+
+      if (!encrypted) {
+
+        alert(
+          "Pega el texto cifrado."
+        );
+
+        return;
+
+      }
+
+
+      if (!password) {
+
+        alert(
+          "Introduce la contraseña."
+        );
+
+        return;
+
+      }
+
+
+      const button =
+        document.getElementById(
+          "btnDecrypt"
+        );
+
+
+      try {
+
+        button.disabled = true;
+
+        button.textContent =
+          "Desencriptando...";
+
+
+        const decrypted =
+          await decryptAesGcm(
+            encrypted,
+            password
+          );
+
+
+        document
+          .getElementById("decrypted")
+          .value = decrypted;
+
+
+      } catch (error) {
+
+        console.error(error);
+
+        document
+          .getElementById("decrypted")
+          .value = "";
+
+
+        alert(
+          error.message
+        );
+
+
+      } finally {
+
+        button.disabled = false;
+
+        button.textContent =
+          "Desencriptar";
+
+      }
+
+    }
+  );
+
+
+/*
+ * ============================================================
+ * COPIAR CIFRADO
+ * ============================================================
+ */
+
+document
+  .getElementById("copyEnc")
+  .addEventListener(
+    "click",
+    async () => {
+
+      const value =
+        document
+          .getElementById("encrypted")
+          .value;
+
+
+      if (!value) return;
+
+
+      try {
+
+        await navigator.clipboard.writeText(
+          value
+        );
+
+      } catch (error) {
+
+        alert(
+          "No fue posible copiar al portapapeles."
+        );
+
+      }
+
+    }
+  );
+
+
+/*
+ * ============================================================
+ * COPIAR DESENCRIPTADO
+ * ============================================================
+ */
+
+document
+  .getElementById("copyDec")
+  .addEventListener(
+    "click",
+    async () => {
+
+      const value =
+        document
+          .getElementById("decrypted")
+          .value;
+
+
+      if (!value) return;
+
+
+      try {
+
+        await navigator.clipboard.writeText(
+          value
+        );
+
+      } catch (error) {
+
+        alert(
+          "No fue posible copiar al portapapeles."
+        );
+
+      }
+
+    }
+  );
+
+
+/*
+ * ============================================================
+ * LIMPIAR CIFRADO
+ * ============================================================
+ */
+
+document
+  .getElementById("btnClear")
+  .addEventListener(
+    "click",
+    () => {
+
+      document
+        .getElementById("plaintext")
+        .value = "";
+
+
+      document
+        .getElementById("encPassword")
+        .value = "";
+
+
+      document
+        .getElementById("encrypted")
+        .value = "";
+
+    }
+  );
+
+
+/*
+ * ============================================================
+ * LIMPIAR DESENCRIPTADO
+ * ============================================================
+ */
+
+document
+  .getElementById("btnClearDec")
+  .addEventListener(
+    "click",
+    () => {
+
+      document
+        .getElementById("cipherInput")
+        .value = "";
+
+
+      document
+        .getElementById("decPassword")
+        .value = "";
+
+
+      document
+        .getElementById("decrypted")
+        .value = "";
+
+    }
+  );
+
 </script>
+
 </body>
 </html>
-
+```
